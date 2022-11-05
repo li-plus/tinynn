@@ -13,34 +13,34 @@ python3 -m examples.mnist
 
 ## Back Propagation
 
-A deep neural network model is a function with huge amount of parameters that transforms the inputs (images/texts/videos) to the outputs (probabilities/embeddings). These models are usually made up of many basic layers or operators, such as dense layers and activation functions. These basic elements form a computational graph, representing their execution order and data flow.
+A deep neural network model is a function with a huge amount of parameters that transforms the inputs (images/texts/videos) into the outputs (probabilities/embeddings). These models are usually made up of many basic layers or operators, such as dense layers and activation functions. These basic elements form a computational graph, representing their execution order and data flow.
 
-Back propagation is an efficient algorithm to train a feedforward neural network, where the graph does not have any cycle. During training, the model first computes the outputs from the inputs by traversing forward the graph, and evaluates the error between the predicted outputs and the ground truth labels using a loss function. Then it computes the gradient of error with respect to model outputs, and back propagates the gradient to all the model parameters. Finally, the optimizer push the parameters a little bit towards the gradient descending direction, in order to decrease the error.
+Backpropagation is an efficient algorithm to train a feedforward neural network, where the graph does not have any cycle. During training, the model first computes the outputs from the inputs by traversing forward the graph, and evaluates the error between the predicted outputs and the ground truth labels using a loss function. Then it computes the gradient of the error with respect to model outputs, and back-propagates the gradient to all the model parameters. Finally, the optimizer pushes the parameters a little bit toward the gradient descending direction, in order to decrease the error.
 
-Formally, denote the model input as $X$ and the ground truth label as $Y$. The model has $n$ layers, and each layer has its own weight $W_i$ and forward function $f_i$.
+Formally, denote the model input as $X$ and the ground truth label as $Y$. The model has $n$ layers sequentially, each has its own weight $W_i$ and forward function $f_i$.
 
 $$
 X_i = \begin{cases}
 X, & i = 1 \\
-f_{i-1}(X_{i-1}, W_{i-1}), & 1 < i \le n
+f_{i-1}(X_{i-1}, W_{i-1}), & i=2,3,\cdots,n+1
 \end{cases}
 $$
 
 The loss $l$ is evaluated by an arbitrary criterion function $C$.
 
 $$
-l = C(X_n, Y)
+l = C(X_{n+1}, Y)
 $$
 
-Using the chain rule, we may back propagate the gradient of $l$ to all the model weights in a reversed order of forward computation.
+Using the chain rule, we may back-propagate the gradient of $l$ to all the model weights in a reversed order of forward computation.
 
 $$
 \frac{\partial l}{\partial X_i} = \frac{\partial l}{\partial X_{i+1}}\frac{\partial X_{i+1}}{\partial X_i}, \quad
 \frac{\partial l}{\partial W_i} = \frac{\partial l}{\partial X_{i+1}}\frac{\partial X_{i+1}}{\partial W_i}, \quad
-i = n-1, n-2,\cdots,1
+i = n, n-1,\cdots,1
 $$
 
-Note that each layer only needs to focus on the local gradient introduced by itself. On layer $i$, the local gradient $\partial X_{i+1}/\partial X_{i}$ and $\partial X_{i+1}/\partial W_{i}$ depends only on the layer function $f_i$. Given the gradient with respect to the layer output (output gradient) $\partial l/\partial X_{i+1}$, the gradient with respect to its input or weight (input gradient) is easily computed using the local graident. Meanwhile, the input gradient of layer $i$ is also the output gradient of the previous layer $i-1$, so all graidents are known after traversing backward the graph only once.
+Note that each layer only needs to focus on the local gradient introduced by itself. On layer $i$, the local gradient $\partial X_{i+1}/\partial X_{i}$ and $\partial X_{i+1}/\partial W_{i}$ depends only on the layer function $f_i$. Given the gradient with respect to the layer output (output gradient) $\partial l/\partial X_{i+1}$, the gradient with respect to its input or weight (input gradient) is easily computed using the local gradient. Meanwhile, the input gradient of layer $i$ is also the output gradient of the previous layer $i-1$, so all gradients are known after traversing backward the graph only once.
 
 In general, the local gradient for a vector function $\mathbf{y} = f(\mathbf{x})$ is called the Jacobian matrix.
 
@@ -101,13 +101,13 @@ $$
 J^T = \text{diag}(\mathbf{y}) - \mathbf{y}\mathbf{y}^T
 $$
 
-The Jacobian-vector product (jvp) can be further simplified as below, where $\odot$ is the element-wise multiplication operator.
+The vector-Jacobian product (vjp) can be further simplified as below, where $\odot$ is the element-wise multiplication operator.
 
 $$
 J^T \mathbf{v} = \mathbf{y} \odot \mathbf{v} - \mathbf{y}(\mathbf{y}^T\mathbf{v})
 $$
 
-Let $\mathbf{v}$ be the gradient of $l$ with respect to $\mathbf{y}$, then the jvp becomes the gradient of $l$ with respect to $\mathbf{x}$.
+Let $\mathbf{v}$ be the gradient of $l$ with respect to $\mathbf{y}$, then the vjp becomes the gradient of $l$ with respect to $\mathbf{x}$.
 
 **Matmul**
 
@@ -164,7 +164,7 @@ $$
 = \sum_{p=1}^{P}\sum_{q=1}^{Q}\frac{\partial l}{\partial y_{i+p-P,j+q-Q}} w^R_{pq}
 $$
 
-The above equation shows that each element of $\partial l/\partial X$ can be computed by convolving the corresponding block of $\partial l/\partial Y$ and $W^R$. After making a full padding for $\partial l/\partial Y$, the derivate for $X$ can be described in matrix form. This operation is also called the deconvolution or transposed convolution.
+The above equation shows that each element of $\partial l/\partial X$ can be computed by convolving the corresponding block of $\partial l/\partial Y$ and $W^R$. After making full padding on $\partial l/\partial Y$, the derivate for $X$ can be described in matrix form. This operation is also called deconvolution or transposed convolution.
 
 $$
 \frac{\partial l}{\partial X} = W^R * \frac{\partial l}{\partial Y}
@@ -175,3 +175,27 @@ Similarly, the derivative of $l$ with respect to $W$ is as follows.
 $$
 \frac{\partial l}{\partial W} = \frac{\partial l}{\partial Y} * X
 $$
+
+## Optimization
+
+After gradients of all parameters are derived, it is time to adjust the parameters to decrease the error, closing the gap between model predictions and ground truth labels.
+
+**Stochastic Gradient Descent (SGD)**
+
+SGD is a simple yet effective optimizer in deep learning tasks. Denote the learning rate as $\eta$, a parameter as $\theta$, current step as $t$. In the simplest scenario, the optimizer decreases the parameter by its gradient scaled by the learning rate.
+
+$$
+\theta_t \leftarrow \theta_{t-1} - \eta \nabla_{\theta_{t-1}} l
+$$
+
+Practically, momentum is further applied to speed up the convergence and prevent stopping at local minima. Weight decay is also used as an effective regularization term to avoid overfitting. Denote the momentum as $\mu$, weight decay as $\lambda$.
+
+$$
+\begin{aligned}
+g_t &\leftarrow \nabla_{\theta_{t-1}} l + \lambda \theta_{t-1} \\
+b_t &\leftarrow \mu b_{t-1} + g_t \\
+\theta_t &\leftarrow \theta_{t-1} - \eta b_t
+\end{aligned}
+$$
+
+Check out [PyTorch SGD Docs](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html) for more details.
