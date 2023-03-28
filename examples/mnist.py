@@ -1,5 +1,6 @@
 import argparse
 import random
+import time
 
 import numpy as np
 from PIL import Image
@@ -14,31 +15,28 @@ from tinynn.utils.data import DataLoader
 class MnistModel(nn.Module):
     def __init__(self, num_classes=10) -> None:
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3)
-        # self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3)
-        self.dropout1 = nn.Dropout(p=0.25)
+        self.conv = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3)
+        self.bn = nn.BatchNorm2d(num_features=32)
         self.fc1 = nn.Linear(in_features=32 * 13 * 13, out_features=128)
-        self.dropout2 = nn.Dropout(p=0.5)
+        self.dropout = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(in_features=128, out_features=num_classes)
 
     def forward(self, x: tinynn.Tensor) -> tinynn.Tensor:
-        x = self.conv1(x)
+        x = self.conv(x)
+        x = self.bn(x)
         x = F.relu(x)
-        # x = self.conv2(x)
-        # x = F.relu(x)
         x = F.max_pool2d(x, kernel_size=2)
-        x = self.dropout1(x)
         x = x.flatten(start_dim=1)
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.dropout2(x)
+        x = self.dropout(x)
         logits = self.fc2(x)
         return logits
 
 
 class PILToTensor:
     def __call__(self, pic: Image.Image) -> tinynn.Tensor:
-        x = tinynn.tensor(np.asarray(pic) / 255)
+        x = tinynn.tensor(np.asarray(pic)) / 255
         if x.ndim == 2:
             x = x[None, :, :]
         assert x.ndim == 3
@@ -67,6 +65,7 @@ class Compose:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=12345)
+    parser.add_argument("--optimizer", type=str, default="sgd", choices=["sgd", "adam"])
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--momentum", type=float, default=0.9)
     parser.add_argument("--weight_decay", type=float, default=0)
@@ -93,15 +92,21 @@ def main():
     val_loader = DataLoader(val_data, batch_size=args.val_batch_size, shuffle=False)
 
     model = MnistModel()
-    optimizer = tinynn.optim.SGD(
-        model.parameters(),
-        lr=args.lr,
-        momentum=args.momentum,
-        weight_decay=args.weight_decay,
-    )
+    if args.optimizer == "sgd":
+        optimizer = tinynn.optim.SGD(
+            model.parameters(),
+            lr=args.lr,
+            momentum=args.momentum,
+            weight_decay=args.weight_decay,
+        )
+    else:
+        optimizer = tinynn.optim.Adam(
+            model.parameters(), lr=args.lr, weight_decay=args.weight_decay
+        )
 
     for epoch_idx in range(args.max_epoch):
         # train one epoch
+        tik = time.time()
         for batch_idx, (inputs, target) in enumerate(train_loader):
             logits = model(inputs)
 
@@ -114,10 +119,13 @@ def main():
             acc = logits.argmax(dim=1).eq(target).mean()
 
             if (batch_idx + 1) % args.log_interval == 0:
+                tok = time.time()
+                speed = args.train_batch_size * args.log_interval / (tok - tik)
                 print(
                     f"[TRAIN] epoch: {epoch_idx}/{args.max_epoch}, batch: {batch_idx}/{len(train_loader)}, "
-                    f"loss: {loss.item():.4f}, acc: {acc.item():.4f}"
+                    f"samples/s: {speed:.2f}, loss: {loss.item():.4f}, acc: {acc.item():.4f}"
                 )
+                tik = tok
 
         # evaluation
         val_acc = 0

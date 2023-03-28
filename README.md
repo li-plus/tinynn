@@ -11,6 +11,8 @@ git clone https://github.com/li-plus/tinynn.git && cd tinynn
 python3 -m examples.mnist
 ```
 
+For development, run `make` to format the code and run the unit tests.
+
 ## Back Propagation
 
 A deep neural network model is a function with a huge amount of parameters that transforms the inputs (images/texts/videos) into the outputs (probabilities/embeddings). These models are usually made up of many basic layers or operators, such as dense layers and activation functions. These basic elements form a computational graph, representing their execution order and data flow.

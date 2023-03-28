@@ -5,16 +5,20 @@ import tinynn.utils as utils
 from tinynn._tensor import (
     Tensor,
     broadcast_tensors,
+    cat,
     empty,
     eye,
     ones,
+    ones_like,
     rand,
     randint,
     randn,
+    result_type,
     stack,
     tensor,
     where,
     zeros,
+    zeros_like,
 )
 from tinynn.autograd import is_grad_enabled, no_grad
 
@@ -26,9 +30,12 @@ __all__ = [
     "tensor",
     "empty",
     "zeros",
+    "zeros_like",
     "ones",
+    "ones_like",
     "eye",
     "broadcast_tensors",
+    "cat",
     "stack",
     "where",
     "rand",
@@ -37,4 +44,5 @@ __all__ = [
     "autograd",
     "no_grad",
     "is_grad_enabled",
+    "result_type",
 ]

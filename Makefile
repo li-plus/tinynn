@@ -1,6 +1,13 @@
+.PHONY: lint test cov
+
+all: lint test
+
 lint:
 	isort .
 	black .
 
-ut:
+test:
 	pytest test
+
+cov:
+	pytest test --cov=tinynn --cov-report term-missing

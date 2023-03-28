@@ -1,5 +1,7 @@
 import tinynn.nn.functional as functional
 from tinynn.nn.module import (
+    BatchNorm2d,
+    Buffer,
     Conv2d,
     ConvTranspose2d,
     CrossEntropyLoss,
@@ -7,6 +9,7 @@ from tinynn.nn.module import (
     Linear,
     MaxPool2d,
     Module,
+    Parameter,
     ReLU,
 )
 
@@ -17,7 +20,10 @@ __all__ = [
     "ReLU",
     "Conv2d",
     "ConvTranspose2d",
+    "BatchNorm2d",
     "MaxPool2d",
     "CrossEntropyLoss",
     "functional",
+    "Parameter",
+    "Buffer",
 ]
